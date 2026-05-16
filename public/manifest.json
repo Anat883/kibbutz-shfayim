@@ -1,0 +1,3 @@
+npx create-react-app kibbutz-shfayim
+cd kibbutz-shfayim
+npm install @supabase/supabase-js
