@@ -383,6 +383,8 @@ export default function App() {
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [calView, setCalView] = useState('month')
+  const [calWeekOffset, setCalWeekOffset] = useState(0) // weeks from today
+  const [calDayOffset, setCalDayOffset] = useState(0)   // days from today
   const [searchQ, setSearchQ] = useState('')
   const [viewEvent, setViewEvent] = useState(null)
   const [regEvent, setRegEvent] = useState(null)
@@ -544,7 +546,7 @@ export default function App() {
   }
 
   function renderWeek(){
-    const todayDate=new Date();const sow=new Date(todayDate);sow.setDate(todayDate.getDate()-todayDate.getDay())
+    const todayDate=new Date();const sow=new Date(todayDate);sow.setDate(todayDate.getDate()-todayDate.getDay()+(calWeekOffset*7))
     const hours=[8,9,10,11,12,13,14,15,16,17,18,19,20,21]
     return(
       <div className="week-grid">
@@ -573,6 +575,7 @@ export default function App() {
 
   function renderDay(){
     const today=new Date()
+    today.setDate(today.getDate()+calDayOffset)
     const dateStr=dsStr(today.getFullYear(),today.getMonth(),today.getDate())
     const hol=HOLIDAYS[dateStr]
     const hours=Array.from({length:14},(_,i)=>i+8)
@@ -631,7 +634,7 @@ export default function App() {
           </div>
           {searchQ.trim()&&(()=>{const q=searchQ.toLowerCase();const results=events.filter(e=>{const dept=getDept(e.department_id);return e.title.toLowerCase().includes(q)||e.location.toLowerCase().includes(q)||(dept&&dept.name.toLowerCase().includes(q))});return(<div className="sec"><div className="sec-title">תוצאות חיפוש ({results.length})</div><div className="erow">{results.length>0?results.map(ev=><EventCard key={ev.id} ev={ev}/>):<div style={{color:'var(--muted)',padding:16}}>לא נמצאו אירועים</div>}</div></div>)})()}
           <div className="sec"><div className="sec-title">קטגוריות ראשיות</div><div className="cat-grid">{depts.map(dept=>(<div key={dept.id} className="cat-card" onClick={()=>{setActiveDepts(new Set([dept.id]));setPage('calendar')}}><div className="cat-icon">{dept.emoji}</div><div className="cat-name" style={{color:dept.dark_color}}>{dept.name}</div></div>))}</div></div>
-          <div className="sec" style={{paddingBottom:20}}><div className="sec-title">אירועים קרובים</div><div className="erow">{events.length===0?<div style={{color:'var(--muted)',padding:16}}>אין אירועים עדיין</div>:events.slice(0,8).map(ev=><EventCard key={ev.id} ev={ev}/>)}</div></div>
+          <div className="sec" style={{paddingBottom:20}}><div className="sec-title">אירועים קרובים</div><div className="erow">{(()=>{const today=new Date().toISOString().slice(0,10);const upcoming=events.filter(e=>e.date>=today).slice(0,8);return upcoming.length===0?<div style={{color:'var(--muted)',padding:16}}>אין אירועים קרובים</div>:upcoming.map(ev=><EventCard key={ev.id} ev={ev}/>)})()}</div></div>
         </>
       )}
 
@@ -651,9 +654,21 @@ export default function App() {
             <div style={{marginTop:10}}><div className="flbl">חגים</div><div style={{display:'flex',gap:10,fontSize:11}}><span style={{background:'var(--hol-l)',color:'#7a5c10',padding:'2px 8px',borderRadius:6,border:'1px solid var(--hol)'}}>✦ יום חג</span><span style={{background:'var(--hol-e)',color:'#7a5000',padding:'2px 8px',borderRadius:6,border:'1px dashed var(--hol)'}}>✦ ערב חג</span>{!holidaysLoaded&&<span style={{color:'var(--muted)',fontSize:10}}>טוען...</span>}</div></div>
           </div>
           <div className="cnav">
-            <button className="cnbtn" onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1)}else setCalMonth(m=>m-1)}}>›</button>
-            <span className="clbl">{HM[calMonth]} {calYear}</span>
-            <button className="cnbtn" onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1)}else setCalMonth(m=>m+1)}}>‹</button>
+            <button className="cnbtn" onClick={()=>{
+              if(calView==='month'){if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1)}else setCalMonth(m=>m-1)}
+              else if(calView==='week') setCalWeekOffset(w=>w-1)
+              else setCalDayOffset(d=>d-1)
+            }}>›</button>
+            <span className="clbl">
+              {calView==='month' && `${HM[calMonth]} ${calYear}`}
+              {calView==='week' && (()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+(calWeekOffset*7));return`שבוע ${d.getDate()} ב${HM[d.getMonth()]} ${d.getFullYear()}`})()}
+              {calView==='day' && (()=>{const d=new Date();d.setDate(d.getDate()+calDayOffset);return`${d.getDate()} ב${HM[d.getMonth()]} ${d.getFullYear()}`})()}
+            </span>
+            <button className="cnbtn" onClick={()=>{
+              if(calView==='month'){if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1)}else setCalMonth(m=>m+1)}
+              else if(calView==='week') setCalWeekOffset(w=>w+1)
+              else setCalDayOffset(d=>d+1)
+            }}>‹</button>
             <div className="vtabs">{['month','week','day'].map((v,i)=>(<button key={v} className={`vt${calView===v?' active':''}`} onClick={()=>setCalView(v)}>{['חודש','שבוע','יום'][i]}</button>))}</div>
           </div>
           {calView==='month'&&renderMonth()}
